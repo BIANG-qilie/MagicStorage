@@ -507,24 +507,24 @@ Mods: {
 					LoveNPC: 附近的{NPCName}个体对本单元拥有一切操纵权.
 					DislikeNPC: 本单元不屑于向{NPCName}提及蓝魔法。
 					HateNPC: "{NPCName}需要改变其试图将蓝魔法用于盈利的想法"
-					// LikeNPC_Princess: "{NPCName} is best friends with my creator."
-					// Princess_LovesNPC: "{NPCName} is such an interesting machine, how does it move?"
+					LikeNPC_Princess: "{NPCName}是我创造者最好的朋友。"
+					Princess_LovesNPC: "{NPCName}是一台如此有趣的机器，它是如何移动的？"
 				}
 
 				# Census support
-				// Census.SpawnCondition: '''"{$Mods.MagicStorage.Configs.MagicStorageServerConfig.allowAutomatonToMoveIn.Label}" config in the "{$Mods.MagicStorage.Configs.MagicStorageServerConfig.DisplayName}" set to On'''
+				Census.SpawnCondition: '''"{$Mods.MagicStorage.Configs.MagicStorageServerConfig.allowAutomatonToMoveIn.Label}" 配置在 "{$Mods.MagicStorage.Configs.MagicStorageServerConfig.DisplayName}" 中设置为开启'''
 			}
 		}
 
 		EnvironmentModule: {
 			UseInventoryModule: {
 				DisplayName: 制作时采用物品栏内物品
-				// DisabledTooltip: This module is currently disabled.
+				DisabledTooltip: 该模块已被禁用
 			}
 
 			UseInventoryNoFavoritesModule: {
 				DisplayName: 制作时采用物品栏内未收藏的物品
-				// DisabledTooltip: This module is currently disabled.
+				DisabledTooltip: 该模块已被禁用
 			}
 
 			JourneyInfiniteItems: {
@@ -831,12 +831,12 @@ Mods: {
 		CraftTooltipOld: 左键单击以制作（按住Ctrl全部制作）
 
 		Crafting: {
-			// Plus1: +1
-			// Plus10: +10
-			// Plus100: +100
-			// Minus1: "-1"
-			// Minus10: "-10"
-			// Minus100: "-100"
+			Plus1: +1
+			Plus10: +10
+			Plus100: +100
+			Minus1: "-1"
+			Minus10: "-10"
+			Minus100: "-100"
 			MaxStack: 设为最大
 			Reset: 重置
 			Amount: 数量: {0}
@@ -852,8 +852,8 @@ Mods: {
 			SearchMod: @模组名 以模组搜索
 			SearchTooltip: "#物品介绍 以介绍搜索"
 			SearchModAndTooltip: @模组名 #物品介绍
-			// TipModAndTooltip: "[c/ffff00:@ModName] to search by mod, [c/ffff00:#Search Tooltip] to search by tooltip (can be combined in that order)"
-			// TipTooltipOnly: "[c/ffff00:#Search Tooltip] to search by tooltip"
+			TipModAndTooltip: "[c/ffff00:@模组名] 以模组搜索，[c/ffff00:#物品介绍] 以介绍搜索（可按该顺序组合）"
+			TipTooltipOnly: "[c/ffff00:#物品介绍] 以介绍搜索"
 		}
 
 		Recipes: 合成配方
@@ -873,11 +873,11 @@ Mods: {
 			无法打开魔法存储UI，因为游戏面板高度太小了，无法正常显示UI界面
 			请在设置中拉低UI缩放比例或在视频设置中提高游戏分辨率
 			'''
-		/* ForcedLayoutChange:
+		ForcedLayoutChange:
 			'''
-			Current UI layout resulted in a panel that was too short to properly display the UI elements.
-			Forcing the UI layout to "Modern Paged" to allocate more vertical space.
-			''' */
+			当前UI布局导致面板过短，无法正常显示UI元素。
+			强制将UI布局切换为"独立分页"以分配更多垂直空间。
+			'''
 
 		Warnings: {
 			StorageDefaultToAllItems: 当前筛选模式下搜索不到任何物品，即使存储中有相应物品。目前显示的是搜索所有物品的结果
@@ -944,48 +944,48 @@ Mods: {
 		AuditLogging: {
 			CommandInfo: {
 				Descriptions: {
-					/* msaudit:
+					msaudit:
 						'''
-						Translates the Magic Storage audit log for the world into a human-readable format
-						The name of the resulting file is derived from the world file's name and is placed in the Worlds folder
-						''' */
-					// msauditclear: Clears the Magic Storage audit log for the world
+						将世界的魔法存储审计日志转换为人类可读格式
+						生成的文件名来自世界文件名，并放置在Worlds文件夹中
+						'''
+					msauditclear: 清除世界的魔法存储审计日志
 				}
 
-				// NoArguments: Expected no arguments
-				// MultiplayerOnly: This command can only be used by the server console
-				// NoLogFile: No Magic Storage audit log file found for this world
-				// LoggingDisabled: Magic Storage audit logging is disabled in the config, please enable it first
-				// AdminOnly: This command can only be used by by the server console or multiplayer clients with the Server Administrator status
+				NoArguments: 预期没有参数
+				MultiplayerOnly: 此命令只能由服务器控制台使用
+				NoLogFile: 未找到此世界的魔法存储审计日志文件
+				LoggingDisabled: 魔法存储审计日志记录在配置中已禁用，请先启用
+				AdminOnly: 此命令只能由服务器控制台或拥有服务器管理员状态的多人游戏客户端使用
 			}
 
 			Errors: {
 				Client: {
-					// NoBuffers: Translation audit file couldn't be written due to missing buffers
-					// IncompleteBuffers: Translation audit file couldn't be written due to some sections not being received
-					// MismatchedBufferCount: Translation audit file couldn't be written due to the amount of received sections ({0}) not matching the expected amount ({1})
+					NoBuffers: 由于缺少缓冲区，无法写入翻译审计文件
+					IncompleteBuffers: 由于某些部分未接收，无法写入翻译审计文件
+					MismatchedBufferCount: 由于接收的部分数量 ({0}) 与预期数量 ({1}) 不匹配，无法写入翻译审计文件
 				}
 
-				// LoadFailed: Failed to load audit file
-				// SaveFailed: Failed to save audit file
-				// TranslationFailed: Failed to write translated audit log to file
-				// TranslationAlreadyRunning: The Magic Storage audit log is already being translated, please wait for the action to finish
-				// ClearingAlreadyRunning: The Magic Storage audit log is already being cleared, please wait for the action to finish
+				LoadFailed: 加载审计文件失败
+				SaveFailed: 保存审计文件失败
+				TranslationFailed: 无法将翻译后的审计日志写入文件
+				TranslationAlreadyRunning: 魔法存储审计日志正在翻译中，请等待操作完成
+				ClearingAlreadyRunning: 魔法存储审计日志正在清除中，请等待操作完成
 			}
 
 			Messages: {
 				Client: {
-					// RequestSent: Command request sent to the server, check the server console or log for information
-					// TranslationSuccess: Translation success! Magic Storage audit log was translated to:
+					RequestSent: 命令请求已发送到服务器，请检查服务器控制台或日志以获取信息
+					TranslationSuccess: 翻译成功！魔法存储审计日志已翻译到:
 				}
 
-				// LoadSuccess: Magic Storage audit log was loaded from: {0}
-				// SaveSuccess: Magic Storage audit log was saved to: {0}
-				// TranslationFileNotLoaded: Magic Storage audit log was not loaded yet, forcing load before translation...
-				// TranslationStarted: Translating Magic Storage audit log to a human-readable format...
-				// TranslationSuccess: Magic Storage audit log was translated to: {0}
-				// ClearingStarted: Magic Storage audit log will be cleared...
-				// ClearingSuccess: Magic Storage audit log was cleared, serializing empty file is pending
+				LoadSuccess: 魔法存储审计日志已从以下位置加载: {0}
+				SaveSuccess: 魔法存储审计日志已保存到: {0}
+				TranslationFileNotLoaded: 魔法存储审计日志尚未加载，强制在翻译前加载...
+				TranslationStarted: 正在将魔法存储审计日志转换为人类可读格式...
+				TranslationSuccess: 魔法存储审计日志已翻译到: {0}
+				ClearingStarted: 魔法存储审计日志将被清除...
+				ClearingSuccess: 魔法存储审计日志已清除，序列化空文件待处理
 			}
 		}
 
@@ -998,10 +998,10 @@ Mods: {
 			DepositSafe: 转移保险箱物品
 			DepositForge: 转移护卫熔炉物品
 			DepositVault: 转移虚空保险库物品
-			// InitShowcaseButton: Initialize Showcase
-			// ResetShowcaseButton: Reset Showcase Items
-			// ClearItemsButton: Clear All Items
-			// FillWithGarbage: Fill With Random Items
+			InitShowcaseButton: 初始化展示柜
+			ResetShowcaseButton: 重置展示柜物品
+			ClearItemsButton: 清除所有物品
+			FillWithGarbage: 填充随机物品
 			SellDuplicatesHeader: 出售同种物品
 			SellDuplicatesButton: 出售
 			SetAStorageName: 在此输入名称...
@@ -1009,24 +1009,24 @@ Mods: {
 			NameWasSetTo: 名称已设置为: {0}
 
 			ItemDeletionMode: {
-				// Label: Item Deletion Mode
-				// Enabled: Item Deletion mode is now [c/00ff00:enabled].  Double click an item to delete it.
-				// Disabled: Item Deletion mode is now [c/ff0000:disabled].
+				Label: 物品删除模式
+				Enabled: 物品删除模式现已 [c/00ff00:启用]。双击物品以删除它。
+				Disabled: 物品删除模式现已 [c/ff0000:禁用]。
 			}
 
 			SellDuplicatesMenu: {
-				// Label: Item Selling Mode
-				// Enabled: Item Selling Mode is now [c/00ff00:enabled].  Click on items to mark them as items to sell.
-				// Disabled: Item Selling Mode is now [c/ff0000:disabled].
+				Label: 物品出售模式
+				Enabled: 物品出售模式现已 [c/00ff00:启用]。点击物品以标记为待出售。
+				Disabled: 物品出售模式现已 [c/ff0000:禁用]。
 				NoPrefix: 出售所有同种无词缀物品
 				KeepMostValue: 保留最值钱的物品
 				KeepLeastValue: 保留最不值钱的物品
 
 				SoldItemsReport: {
-					// GotCoins: "{0}/{1} items were sold for {2}"
-					// NoCoins: "{0}/{1} items were sold, but none had any value"
-					// NoSell: No items were sold
-					// PacketTooLarge: The amount of item stacks to sell was too large to send in one packet.  Please try again with fewer stacks.
+					GotCoins: "{0}/{1} 个物品已出售，获得 {2}"
+					NoCoins: "{0}/{1} 个物品已出售，但没有任何价值"
+					NoSell: 没有物品被出售
+					PacketTooLarge: 要出售的物品堆叠数量太大，无法在一个数据包中发送。请减少堆叠数量后重试。
 				}
 			}
 
@@ -1251,7 +1251,7 @@ Mods: {
 			}
 		}
 
-		// Keybinds.PrintItemData.DisplayName: Print Item Data
+		Keybinds.PrintItemData.DisplayName: 输出物品数据
 
 		Configs: {
 			MagicStorageConfig: {
@@ -1324,7 +1324,7 @@ Mods: {
 				uiFavorites: {
 					Label: "[i:FallenStar]  收藏物品与配方"
 					Tooltip: 开启后，可在制作单元中收藏物品和配方
-				}
+git				}
 
 				extraFilterIcons: {
 					Label: "[i:Cog]  更多排序选项"
@@ -1347,18 +1347,18 @@ Mods: {
 				}
 
 				automatonRemembers: {
-					// Label: Automaton remembers last help tip
-					// Tooltip: The Automaton will remember which help tip it last displayed to the user and display that help tip when interacted with.
+					Label: 自动机记住最后一条帮助提示
+					Tooltip: 自动机会记住它最后向用户显示的帮助提示，并在交互时显示该帮助提示。
 				}
 
 				globalShimmerItemBlacklist: {
-					// Label: Global Item Shimmering Blacklist
-					// Tooltip: Click with Left Ctrl + Left Shift to add/remove blacklist
+					Label: 全局物品微光黑名单
+					Tooltip: 按住左 Ctrl + 左 Shift 点击以添加/移除黑名单
 				}
 
 				useOldSlotFocus: {
-					// Label: use Old Slot Focus
-					// Tooltip: ""
+					Label: 使用旧版槽位焦点
+					Tooltip: ""
 				}
 			}
 
@@ -1422,18 +1422,18 @@ Mods: {
 				}
 
 				auditLog: {
-					// Label: Server Audit Log
-					// Tooltip: Enable to make client interactions with any storage system be reported to an audit log
+					Label: 服务器审计日志
+					Tooltip: 启用后，客户端与任何存储系统的交互将被报告到审计日志
 				}
 
 				localHostAdmin: {
-					// Label: Give Server Admin to Local Host
-					// Tooltip: Enable to force the local host to have the Server Administrator status when joining a server
+					Label: 给予本地主机服务器管理员权限
+					Tooltip: 启用后，强制本地主机在加入服务器时拥有服务器管理员状态
 				}
 
 				automatonHappiness: {
-					// Label: Automaton Happiness Affects Sell Prices
-					// Tooltip: Disable to prevent the Automaton from affecting the sell value of items sold via Item Selling Mode
+					Label: 自动机快乐度影响出售价格
+					Tooltip: 禁用以防止自动机影响通过物品出售模式出售的物品的出售价值
 				}
 			}
 
