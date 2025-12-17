@@ -51,41 +51,41 @@ namespace MagicStorage {
 		}
 
 		/// <summary>
-		/// 已加载的 NPinyin.Core 程序集引用
+		/// Reference to the loaded NPinyin.Core assembly
 		/// </summary>
 		public static Assembly NPinyinAssembly { get; private set; }
 
 		/// <summary>
-		/// 从嵌入资源加载 NPinyin.Core.dll
+		/// Load NPinyin.Core.dll from embedded resources
 		/// </summary>
 		private void LoadNPinyinAssembly() {
 			try {
-				// 获取当前程序集
+				// Get the current assembly
 				Assembly assembly = Assembly.GetExecutingAssembly();
 				string resourceName = "NPinyin.Core.dll";
 
-				// 从嵌入资源读取 DLL
+				// Read DLL from embedded resources
 				using (Stream stream = assembly.GetManifestResourceStream(resourceName)) {
 					if (stream == null) {
 						Logger.Warn($"Could not find embedded resource: {resourceName}. Pinyin search will be disabled.");
 						return;
 					}
 
-					// 读取 DLL 字节数组
+					// Read DLL byte array
 					byte[] assemblyData = new byte[stream.Length];
 					stream.Read(assemblyData, 0, assemblyData.Length);
 
-					// 加载程序集并保存引用
+					// Load assembly and save reference
 					NPinyinAssembly = Assembly.Load(assemblyData);
 					
-					// 标记 NPinyin 已加载，允许 JIT ConvertToPinyin 方法
+					// Mark NPinyin as loaded, allowing JIT compilation of ConvertToPinyin method
 					CheckModBuildVersionBeforeJIT.nPinyinLoaded = true;
 					
 					Logger.Info("Successfully loaded NPinyin.Core.dll from embedded resources.");
 					Logger.Info("[DEBUG] Pinyin search feature is now enabled.");
 				}
 			} catch (Exception ex) {
-				// 如果加载失败，记录错误但不影响模组其他功能
+				// If loading fails, log error but don't affect other mod functionality
 				Logger.Warn($"Failed to load NPinyin.Core.dll: {ex.Message}. Pinyin search will be disabled.");
 			}
 		}

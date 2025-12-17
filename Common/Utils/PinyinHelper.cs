@@ -8,142 +8,142 @@ using Terraria.Localization;
 
 namespace MagicStorage.Common.Utils {
 	/// <summary>
-	/// 提供拼音搜索功能的工具类
+	/// Utility class providing pinyin search functionality
 	/// </summary>
 	public static class PinyinHelper {
 		/// <summary>
-		/// 缓存物品类型的拼音信息，避免重复计算
-		/// 使用 ConcurrentDictionary 确保线程安全
+		/// Cache for pinyin information of item types to avoid redundant calculations
+		/// Uses ConcurrentDictionary to ensure thread safety
 		/// </summary>
 		private static readonly ConcurrentDictionary<int, PinyinInfo> _pinyinCache = new();
 
 		/// <summary>
-		/// NPinyin.Core 程序集缓存
+		/// Cached NPinyin.Core assembly
 		/// </summary>
 		private static Assembly _nPinyinAssembly;
 
 		/// <summary>
-		/// NPinyin 是否已加载的标志（通过反射设置，避免循环依赖）
+		/// Flag indicating whether NPinyin is loaded (set via reflection to avoid circular dependencies)
 		/// </summary>
 		private static bool? _nPinyinLoaded;
 
 		/// <summary>
-		/// NPinyin.Pinyin 类型缓存（通过反射获取，避免 JIT 阶段解析）
+		/// Cached NPinyin.Pinyin type (obtained via reflection to avoid JIT-time type resolution)
 		/// </summary>
 		private static Type _pinyinType;
 
 		/// <summary>
-		/// GetPinyin 方法缓存
+		/// Cached GetPinyin method
 		/// </summary>
 		private static MethodInfo _getPinyinMethod;
 
 		/// <summary>
-		/// GetInitials 方法缓存
+		/// Cached GetInitials method
 		/// </summary>
 		private static MethodInfo _getInitialsMethod;
 
 		/// <summary>
-		/// 用于同步初始化 NPinyin 类型和方法的锁对象
+		/// Lock object for synchronizing initialization of NPinyin types and methods
 		/// </summary>
 		private static readonly object _pinyinInitLock = new object();
 
 		/// <summary>
-		/// 检查当前游戏语言是否为简体中文
+		/// Checks if the current game language is Simplified Chinese
 		/// </summary>
-		/// <returns>如果是简体中文返回true，否则返回false</returns>
+		/// <returns>Returns true if Simplified Chinese, otherwise false</returns>
 		public static bool IsSimplifiedChinese() {
 			try {
-				// 检查当前活动语言文化
+				// Check the current active language culture
 				var culture = Language.ActiveCulture;
 				return culture != null && culture.Name == "zh-Hans";
 			} catch {
-				// 如果检测失败，默认返回false（不启用拼音搜索）
+				// If detection fails, default to false (don't enable pinyin search)
 				return false;
 			}
 		}
 
 		/// <summary>
-		/// 检查是否应该启用拼音搜索
-		/// 仅在简体中文环境下启用，且 NPinyin 库已加载
+		/// Checks whether pinyin search should be enabled
+		/// Only enabled in Simplified Chinese environment and when NPinyin library is loaded
 		/// </summary>
-		/// <returns>是否启用拼音搜索</returns>
+		/// <returns>Whether pinyin search is enabled</returns>
 		public static bool ShouldEnablePinyinSearch() {
-			// 检查配置选项、语言设置和 NPinyin 库是否已加载
+			// Check configuration option, language setting, and whether NPinyin library is loaded
 			if (!MagicStorageConfig.EnablePinyinSearch || !IsSimplifiedChinese())
 				return false;
 
-			// 确保 NPinyin 库已加载
+			// Ensure NPinyin library is loaded
 			return IsNPinyinLoaded();
 		}
 
 		/// <summary>
-		/// 物品的拼音信息
+		/// Pinyin information for an item
 		/// </summary>
 		public class PinyinInfo {
 			/// <summary>
-			/// 完整拼音（小写，无空格），如 "tiekuang"
+			/// Full pinyin (lowercase, no spaces), e.g., "tiekuang"
 			/// </summary>
 			public string FullPinyin { get; set; } = string.Empty;
 
 			/// <summary>
-			/// 拼音首字母（小写），如 "tk"
+			/// Pinyin initials (lowercase), e.g., "tk"
 			/// </summary>
 			public string FirstLetters { get; set; } = string.Empty;
 		}
 
 		/// <summary>
-		/// 获取物品的拼音信息（带缓存）
+		/// Gets pinyin information for an item (with caching)
 		/// </summary>
-		/// <param name="item">物品实例</param>
-		/// <returns>拼音信息</returns>
+		/// <param name="item">Item instance</param>
+		/// <returns>Pinyin information</returns>
 		public static PinyinInfo GetPinyinInfo(Item item) {
 			if (item?.IsAir != false)
 				return new PinyinInfo();
 
-			// 在 lambda 外部获取物品名称，避免闭包捕获 item 对象
-			// 对于同一个 item.type，item.Name 应该是稳定的
+			// Get item name outside lambda to avoid closure capturing item object
+			// For the same item.type, item.Name should be stable
 			string itemName = item.Name ?? string.Empty;
 			int itemType = item.type;
 
-			// 使用 GetOrAdd 确保线程安全，避免重复计算
+			// Use GetOrAdd to ensure thread safety and avoid redundant calculations
 			return _pinyinCache.GetOrAdd(itemType, _ => ConvertToPinyin(itemName));
 		}
 
 		/// <summary>
-		/// 检查搜索文本是否匹配物品名称
-		/// 支持中文、拼音全拼、拼音首字母三种匹配方式
+		/// Checks if search text matches item name
+		/// Supports three matching methods: Chinese, full pinyin, and pinyin initials
 		/// </summary>
-		/// <param name="item">物品实例</param>
-		/// <param name="searchText">搜索文本</param>
-		/// <returns>是否匹配</returns>
+		/// <param name="item">Item instance</param>
+		/// <param name="searchText">Search text</param>
+		/// <returns>Whether it matches</returns>
 		public static bool MatchesSearch(Item item, string searchText) {
 			if (item?.IsAir != false || string.IsNullOrEmpty(searchText))
 				return false;
 
-			// 获取物品名称，如果为null则使用空字符串
+			// Get item name, use empty string if null
 			string itemName = item.Name ?? string.Empty;
 			searchText = searchText.Trim();
 
-			// 如果搜索文本为空（经过Trim后），直接返回false
+			// If search text is empty (after Trim), return false directly
 			if (string.IsNullOrEmpty(searchText))
 				return false;
 
-			// 1. 直接中文匹配（原有功能，保持兼容）
-			// 这是最快的匹配方式，优先检查
-			// 如果中文匹配成功，直接返回，避免不必要的拼音转换
+			// 1. Direct Chinese matching (original functionality, maintained for compatibility)
+			// This is the fastest matching method, check first
+			// If Chinese matching succeeds, return directly to avoid unnecessary pinyin conversion
 			if (!string.IsNullOrEmpty(itemName) && 
 				itemName.Contains(searchText, StringComparison.OrdinalIgnoreCase))
 				return true;
 
-			// 2. 拼音匹配（仅在中文匹配失败时执行，避免不必要的拼音转换）
+			// 2. Pinyin matching (only executed when Chinese matching fails, to avoid unnecessary pinyin conversion)
 			var pinyinInfo = GetPinyinInfo(item);
 
-			// 2.1 拼音全拼匹配（不区分大小写）
+			// 2.1 Full pinyin matching (case-insensitive)
 			if (!string.IsNullOrEmpty(pinyinInfo.FullPinyin) &&
 				pinyinInfo.FullPinyin.Contains(searchText, StringComparison.OrdinalIgnoreCase))
 				return true;
 
-			// 2.2 拼音首字母匹配（不区分大小写）
+			// 2.2 Pinyin initials matching (case-insensitive)
 			if (!string.IsNullOrEmpty(pinyinInfo.FirstLetters) &&
 				pinyinInfo.FirstLetters.Contains(searchText, StringComparison.OrdinalIgnoreCase))
 				return true;
@@ -152,92 +152,92 @@ namespace MagicStorage.Common.Utils {
 		}
 
 		/// <summary>
-		/// 将中文文本转换为拼音信息
-		/// 使用反射调用 NPinyin 库，避免在 JIT 阶段解析类型
+		/// Converts Chinese text to pinyin information
+		/// Uses reflection to call NPinyin library, avoiding type resolution at JIT time
 		/// </summary>
-		/// <param name="text">中文文本</param>
-		/// <returns>拼音信息</returns>
+		/// <param name="text">Chinese text</param>
+		/// <returns>Pinyin information</returns>
 		[MethodImpl(MethodImplOptions.NoInlining)]
 		private static PinyinInfo ConvertToPinyin(string text) {
 			if (string.IsNullOrEmpty(text))
 				return new PinyinInfo();
 
-			// 如果 NPinyin 未加载，直接返回空信息
-			// 通过反射检查，避免循环依赖
+			// If NPinyin is not loaded, return empty information directly
+			// Check via reflection to avoid circular dependencies
 			if (!IsNPinyinLoaded())
 				return new PinyinInfo();
 
-			// 延迟初始化 NPinyin 类型和方法（使用反射避免 JIT 阶段解析）
-			// 使用双重检查锁定模式确保线程安全
+			// Lazy initialization of NPinyin types and methods (using reflection to avoid JIT-time type resolution)
+			// Use double-checked locking pattern to ensure thread safety
 			if (_pinyinType == null || _getPinyinMethod == null || _getInitialsMethod == null) {
 				try {
 					lock (_pinyinInitLock) {
-						// 再次检查，避免重复初始化
+						// Check again to avoid redundant initialization
 						if (_pinyinType == null || _getPinyinMethod == null || _getInitialsMethod == null) {
 							try {
-								// 使用反射查找已加载的程序集，避免直接引用
+								// Use reflection to find loaded assembly, avoiding direct reference
 								Assembly assembly = FindNPinyinAssembly();
 								if (assembly == null)
 									return new PinyinInfo();
 
-								// 从已加载的程序集中获取类型
-								// 添加额外的空值检查，防止 assembly 本身有问题
+								// Get type from loaded assembly
+								// Add additional null check to prevent issues with assembly itself
 								Type pinyinType = null;
 								try {
 									pinyinType = assembly.GetType("NPinyin.Pinyin", throwOnError: false);
 								} catch {
-									// 如果 GetType 抛出异常，pinyinType 保持为 null
+									// If GetType throws exception, pinyinType remains null
 								}
 
 								if (pinyinType == null)
 									return new PinyinInfo();
 
-								// 获取方法（完全避免使用 GetMethod，只使用 GetMethods 然后手动过滤）
-								// 这样可以完全避免 AmbiguousMatchException
+								// Get methods (completely avoid using GetMethod, only use GetMethods then manually filter)
+								// This completely avoids AmbiguousMatchException
 								MethodInfo[] allMethods = GetMethodsSafely(pinyinType);
 								if (allMethods == null || allMethods.Length == 0)
 									return new PinyinInfo();
 								
-								// 查找 GetPinyin(string) 和 GetInitials(string) 方法
+								// Find GetPinyin(string) and GetInitials(string) methods
 								MethodInfo getPinyinMethod = FindMethod(allMethods, "GetPinyin");
 								MethodInfo getInitialsMethod = FindMethod(allMethods, "GetInitials");
 								
 								if (getPinyinMethod == null || getInitialsMethod == null)
 									return new PinyinInfo();
 
-								// 所有检查通过后，才赋值给静态字段（原子性操作）
+								// Only assign to static fields after all checks pass (atomic operation)
 								_nPinyinAssembly = assembly;
 								_pinyinType = pinyinType;
 								_getPinyinMethod = getPinyinMethod;
 								_getInitialsMethod = getInitialsMethod;
 							} catch (Exception) {
-								// 如果初始化过程中出现任何异常，返回空信息
-								// 不记录异常，避免日志污染
+								// If any exception occurs during initialization, return empty information
+								// Don't log exception to avoid log pollution
 								return new PinyinInfo();
 							}
 						}
 					}
 				} catch (Exception) {
-					// 如果锁外出现异常，返回空信息
+					// If exception occurs outside lock, return empty information
 					return new PinyinInfo();
 				}
 			}
 
-			// 再次检查方法是否已初始化（防止在锁外被设置为 null）
-			// 使用局部变量保存引用，避免在检查和使用之间被其他线程修改
+			// Check again if methods are initialized (prevent being set to null outside lock)
+			// Use local variables to save references, avoiding modification by other threads between check and use
 			MethodInfo getPinyin = _getPinyinMethod;
 			MethodInfo getInitials = _getInitialsMethod;
 			if (getPinyin == null || getInitials == null)
 				return new PinyinInfo();
 
 			try {
-				// 使用反射调用 GetPinyin 方法（使用局部变量，确保线程安全）
+				// Use reflection to call GetPinyin method (use local variables to ensure thread safety)
 				object fullPinyinResult = getPinyin.Invoke(null, new object[] { text });
 				string fullPinyin = fullPinyinResult?.ToString() ?? string.Empty;
-				// 移除空格，转换为小写
+				// Remove spaces, convert to lowercase
 				fullPinyin = fullPinyin.Replace(" ", "").ToLowerInvariant();
 
-				// 使用反射调用 GetInitials 方法（使用局部变量，确保线程安全）
+				// Use reflection to call GetInitials method (use local variables to ensure thread safety)
 				object initialsResult = getInitials.Invoke(null, new object[] { text });
 				string firstLetters = initialsResult?.ToString() ?? string.Empty;
 				firstLetters = firstLetters.ToLowerInvariant();
@@ -247,49 +247,49 @@ namespace MagicStorage.Common.Utils {
 					FirstLetters = firstLetters
 				};
 			} catch {
-				// 如果转换失败，返回空信息（不影响原有搜索功能）
+				// If conversion fails, return empty information (doesn't affect original search functionality)
 				return new PinyinInfo();
 			}
 		}
 
 		/// <summary>
-		/// 安全地获取类型的所有方法（避免 AmbiguousMatchException）
+		/// Safely gets all methods of a type (avoids AmbiguousMatchException)
 		/// </summary>
-		/// <param name="type">要查找方法的类型</param>
-		/// <returns>方法数组，如果失败返回 null</returns>
+		/// <param name="type">Type to find methods for</param>
+		/// <returns>Method array, returns null if failed</returns>
 		private static MethodInfo[] GetMethodsSafely(Type type) {
 			if (type == null)
 				return null;
 			
-			// 方式1：不使用 FlattenHierarchy
+			// Method 1: Without FlattenHierarchy
 			try {
 				MethodInfo[] methods = type.GetMethods(BindingFlags.Public | BindingFlags.Static);
 				if (methods != null && methods.Length > 0)
 					return methods;
 			} catch (AmbiguousMatchException) {
-				// 如果失败，尝试方式2
+				// If failed, try method 2
 			} catch {
-				// 其他异常也尝试方式2
+				// Other exceptions also try method 2
 			}
 			
-			// 方式2：使用 FlattenHierarchy
+			// Method 2: With FlattenHierarchy
 			try {
 				MethodInfo[] methods = type.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
 				if (methods != null && methods.Length > 0)
 					return methods;
 			} catch {
-				// 如果还是失败，返回 null
+				// If still failed, return null
 			}
 			
 			return null;
 		}
 
 		/// <summary>
-		/// 从方法数组中查找指定名称的方法（接受 string 或 object 参数）
+		/// Finds a method with specified name from method array (accepts string or object parameter)
 		/// </summary>
-		/// <param name="methods">方法数组</param>
-		/// <param name="methodName">方法名称</param>
-		/// <returns>找到的方法，如果未找到返回 null</returns>
+		/// <param name="methods">Method array</param>
+		/// <param name="methodName">Method name</param>
+		/// <returns>Found method, returns null if not found</returns>
 		private static MethodInfo FindMethod(MethodInfo[] methods, string methodName) {
 			if (methods == null || string.IsNullOrEmpty(methodName))
 				return null;
@@ -300,7 +300,7 @@ namespace MagicStorage.Common.Utils {
 				if (method == null || !method.IsStatic)
 					continue;
 				
-				// method.Name 通常不会抛出异常，不需要额外的 try-catch
+				// method.Name usually doesn't throw exceptions, no need for additional try-catch
 				if (method.Name != methodName)
 					continue;
 				
@@ -317,11 +317,11 @@ namespace MagicStorage.Common.Utils {
 					if (paramType == null)
 						continue;
 					
-					// 支持 string 或 object 类型的参数
+					// Support string or object type parameters
 					if (paramType == stringType || paramType == typeof(object))
 						return method;
 				} catch {
-					// 忽略单个方法的错误，继续查找
+					// Ignore errors for individual methods, continue searching
 					continue;
 				}
 			}
@@ -330,7 +330,7 @@ namespace MagicStorage.Common.Utils {
 		}
 
 		/// <summary>
-		/// 检查 NPinyin 是否已加载（通过反射，避免循环依赖）
+		/// Checks if NPinyin is loaded (via reflection to avoid circular dependencies)
 		/// </summary>
 		[MethodImpl(MethodImplOptions.NoInlining)]
 		private static bool IsNPinyinLoaded() {
@@ -338,8 +338,8 @@ namespace MagicStorage.Common.Utils {
 				return _nPinyinLoaded.Value;
 
 			try {
-				// 通过反射检查 CheckModBuildVersionBeforeJIT.nPinyinLoaded
-				// 使用当前程序集名称，避免硬编码
+				// Check CheckModBuildVersionBeforeJIT.nPinyinLoaded via reflection
+				// Use current assembly name to avoid hardcoding
 				Assembly currentAssembly = Assembly.GetExecutingAssembly();
 				string assemblyName = currentAssembly.GetName().Name;
 				Type checkType = Type.GetType($"MagicStorage.CheckModBuildVersionBeforeJIT, {assemblyName}");
@@ -354,22 +354,22 @@ namespace MagicStorage.Common.Utils {
 					}
 				}
 			} catch {
-				// 如果反射失败，假设未加载（安全策略）
+				// If reflection fails, assume not loaded (safe strategy)
 			}
 
-			// 默认返回 false，确保不会因为反射失败而启用拼音搜索
+			// Default to false to ensure pinyin search is not enabled due to reflection failure
 			_nPinyinLoaded = false;
 			return false;
 		}
 
 		/// <summary>
-		/// 获取已加载的 NPinyin.Core 程序集
-		/// 从 MagicStorageMod 获取，避免在 JIT 阶段触发程序集解析
+		/// Gets the loaded NPinyin.Core assembly
+		/// Gets from MagicStorageMod to avoid triggering assembly resolution at JIT time
 		/// </summary>
 		[MethodImpl(MethodImplOptions.NoInlining)]
 		private static Assembly FindNPinyinAssembly() {
 			try {
-				// 通过反射从 MagicStorageMod 获取程序集引用
+				// Get assembly reference from MagicStorageMod via reflection
 				Type modType = Type.GetType("MagicStorage.MagicStorageMod, MagicStorage");
 				if (modType == null)
 					return null;
@@ -384,20 +384,20 @@ namespace MagicStorage.Common.Utils {
 
 				return assemblyObj as Assembly;
 			} catch (Exception) {
-				// 如果反射失败，返回 null
+				// If reflection fails, return null
 				return null;
 			}
 		}
 
 		/// <summary>
-		/// 清空拼音缓存（用于内存管理）
+		/// Clears pinyin cache (for memory management)
 		/// </summary>
 		public static void ClearCache() {
 			_pinyinCache.Clear();
 		}
 
 		/// <summary>
-		/// 获取缓存大小（用于调试和监控）
+		/// Gets cache size (for debugging and monitoring)
 		/// </summary>
 		public static int CacheSize => _pinyinCache.Count;
 	}
