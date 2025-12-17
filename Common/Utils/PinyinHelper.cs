@@ -25,9 +25,30 @@ namespace MagicStorage.Common.Utils {
 		private static Assembly _nPinyinAssembly;
 
 		/// <summary>
-		/// Flag indicating whether NPinyin is loaded (set via reflection to avoid circular dependencies)
+		/// Lazy initialization of NPinyin loaded status (thread-safe)
 		/// </summary>
-		private static bool? _nPinyinLoaded;
+		private static readonly Lazy<bool> _nPinyinLoadedLazy = new Lazy<bool>(() => {
+			try {
+				// Check CheckModBuildVersionBeforeJIT.nPinyinLoaded via reflection
+				// Use current assembly name to avoid hardcoding
+				Assembly currentAssembly = Assembly.GetExecutingAssembly();
+				string assemblyName = currentAssembly.GetName().Name;
+				Type checkType = Type.GetType($"MagicStorage.CheckModBuildVersionBeforeJIT, {assemblyName}");
+				if (checkType != null) {
+					FieldInfo field = checkType.GetField("nPinyinLoaded", BindingFlags.Public | BindingFlags.Static);
+					if (field != null) {
+						object value = field.GetValue(null);
+						if (value is bool loaded) {
+							return loaded;
+						}
+					}
+				}
+			} catch {
+				// If reflection fails, assume not loaded (safe strategy)
+			}
+			// Default to false to ensure pinyin search is not enabled due to reflection failure
+			return false;
+		});
 
 		/// <summary>
 		/// Cached NPinyin.Pinyin type (obtained via reflection to avoid JIT-time type resolution)
@@ -340,35 +361,11 @@ namespace MagicStorage.Common.Utils {
 
 		/// <summary>
 		/// Checks if NPinyin is loaded (via reflection to avoid circular dependencies)
+		/// Uses Lazy initialization for thread safety
 		/// </summary>
 		[MethodImpl(MethodImplOptions.NoInlining)]
 		private static bool IsNPinyinLoaded() {
-			if (_nPinyinLoaded.HasValue)
-				return _nPinyinLoaded.Value;
-
-			try {
-				// Check CheckModBuildVersionBeforeJIT.nPinyinLoaded via reflection
-				// Use current assembly name to avoid hardcoding
-				Assembly currentAssembly = Assembly.GetExecutingAssembly();
-				string assemblyName = currentAssembly.GetName().Name;
-				Type checkType = Type.GetType($"MagicStorage.CheckModBuildVersionBeforeJIT, {assemblyName}");
-				if (checkType != null) {
-					FieldInfo field = checkType.GetField("nPinyinLoaded", BindingFlags.Public | BindingFlags.Static);
-					if (field != null) {
-						object value = field.GetValue(null);
-						if (value is bool loaded) {
-							_nPinyinLoaded = loaded;
-							return loaded;
-						}
-					}
-				}
-			} catch {
-				// If reflection fails, assume not loaded (safe strategy)
-			}
-
-			// Default to false to ensure pinyin search is not enabled due to reflection failure
-			_nPinyinLoaded = false;
-			return false;
+			return _nPinyinLoadedLazy.Value;
 		}
 
 		/// <summary>
