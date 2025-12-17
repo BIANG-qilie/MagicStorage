@@ -130,6 +130,7 @@ namespace MagicStorage.Common.Utils {
 
 			// 1. 直接中文匹配（原有功能，保持兼容）
 			// 这是最快的匹配方式，优先检查
+			// 如果中文匹配成功，直接返回，避免不必要的拼音转换
 			if (!string.IsNullOrEmpty(itemName) && 
 				itemName.Contains(searchText, StringComparison.OrdinalIgnoreCase))
 				return true;
@@ -193,156 +194,14 @@ namespace MagicStorage.Common.Utils {
 
 								// 获取方法（完全避免使用 GetMethod，只使用 GetMethods 然后手动过滤）
 								// 这样可以完全避免 AmbiguousMatchException
-								MethodInfo getPinyinMethod = null;
-								MethodInfo getInitialsMethod = null;
-								try {
-									Type stringType = typeof(string);
-									
-									// 使用 GetMethods 获取所有方法，然后手动过滤
-									// 完全避免使用 GetMethod，因为它可能抛出 AmbiguousMatchException
-									MethodInfo[] allMethods = null;
-									
-									// 尝试多种方式获取方法列表
-									bool methodsObtained = false;
-									
-									// 方式1：不使用 FlattenHierarchy
-									try {
-										allMethods = pinyinType.GetMethods(BindingFlags.Public | BindingFlags.Static);
-										if (allMethods != null && allMethods.Length > 0) {
-											methodsObtained = true;
-										}
-									} catch (AmbiguousMatchException) {
-										// 如果失败，尝试方式2
-									} catch {
-										// 其他异常也尝试方式2
-									}
-									
-									// 方式2：使用 FlattenHierarchy
-									if (!methodsObtained) {
-										try {
-											allMethods = pinyinType.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
-											if (allMethods != null && allMethods.Length > 0) {
-												methodsObtained = true;
-											}
-										} catch {
-											// 如果还是失败，返回空信息
-											return new PinyinInfo();
-										}
-									}
-									
-									if (!methodsObtained || allMethods == null || allMethods.Length == 0)
-										return new PinyinInfo();
-									
-									// 查找 GetPinyin(string) 方法
-									foreach (MethodInfo method in allMethods) {
-										if (method == null)
-											continue;
-										
-										try {
-											// 先检查名称和静态属性，避免不必要的 GetParameters 调用
-											// 添加空值检查，确保方法名称访问安全
-											string methodName = null;
-											try {
-												methodName = method.Name;
-											} catch {
-												continue;
-											}
-											
-											if (methodName != "GetPinyin" || !method.IsStatic)
-												continue;
-											
-											// 安全地获取参数信息
-											ParameterInfo[] parameters = null;
-											try {
-												parameters = method.GetParameters();
-											} catch {
-												// 如果 GetParameters 失败，跳过此方法
-												continue;
-											}
-											
-											if (parameters != null && parameters.Length == 1) {
-												Type paramType = null;
-												try {
-													ParameterInfo param = parameters[0];
-													if (param == null)
-														continue;
-													paramType = param.ParameterType;
-													if (paramType == null)
-														continue;
-												} catch {
-													continue;
-												}
-												
-												if (paramType == stringType || paramType == typeof(object)) {
-													getPinyinMethod = method;
-													break;
-												}
-											}
-										} catch {
-											// 忽略单个方法的错误，继续查找
-											continue;
-										}
-									}
-									
-									// 查找 GetInitials(string) 方法
-									foreach (MethodInfo method in allMethods) {
-										if (method == null)
-											continue;
-										
-										try {
-											// 先检查名称和静态属性，避免不必要的 GetParameters 调用
-											// 添加空值检查，确保方法名称访问安全
-											string methodName = null;
-											try {
-												methodName = method.Name;
-											} catch {
-												continue;
-											}
-											
-											if (methodName != "GetInitials" || !method.IsStatic)
-												continue;
-											
-											// 安全地获取参数信息
-											ParameterInfo[] parameters = null;
-											try {
-												parameters = method.GetParameters();
-											} catch {
-												// 如果 GetParameters 失败，跳过此方法
-												continue;
-											}
-											
-											if (parameters != null && parameters.Length == 1) {
-												Type paramType = null;
-												try {
-													ParameterInfo param = parameters[0];
-													if (param == null)
-														continue;
-													paramType = param.ParameterType;
-													if (paramType == null)
-														continue;
-												} catch {
-													continue;
-												}
-												
-												if (paramType == stringType || paramType == typeof(object)) {
-													getInitialsMethod = method;
-													break;
-												}
-											}
-										} catch {
-											// 忽略单个方法的错误，继续查找
-											continue;
-										}
-									}
-									
-									// 检查是否成功找到方法
-									if (getPinyinMethod == null || getInitialsMethod == null)
-										return new PinyinInfo();
-								} catch {
-									// 如果获取方法时抛出异常，方法保持为 null
+								MethodInfo[] allMethods = GetMethodsSafely(pinyinType);
+								if (allMethods == null || allMethods.Length == 0)
 									return new PinyinInfo();
-								}
-
+								
+								// 查找 GetPinyin(string) 和 GetInitials(string) 方法
+								MethodInfo getPinyinMethod = FindMethod(allMethods, "GetPinyin");
+								MethodInfo getInitialsMethod = FindMethod(allMethods, "GetInitials");
+								
 								if (getPinyinMethod == null || getInitialsMethod == null)
 									return new PinyinInfo();
 
@@ -391,6 +250,83 @@ namespace MagicStorage.Common.Utils {
 				// 如果转换失败，返回空信息（不影响原有搜索功能）
 				return new PinyinInfo();
 			}
+		}
+
+		/// <summary>
+		/// 安全地获取类型的所有方法（避免 AmbiguousMatchException）
+		/// </summary>
+		/// <param name="type">要查找方法的类型</param>
+		/// <returns>方法数组，如果失败返回 null</returns>
+		private static MethodInfo[] GetMethodsSafely(Type type) {
+			if (type == null)
+				return null;
+			
+			// 方式1：不使用 FlattenHierarchy
+			try {
+				MethodInfo[] methods = type.GetMethods(BindingFlags.Public | BindingFlags.Static);
+				if (methods != null && methods.Length > 0)
+					return methods;
+			} catch (AmbiguousMatchException) {
+				// 如果失败，尝试方式2
+			} catch {
+				// 其他异常也尝试方式2
+			}
+			
+			// 方式2：使用 FlattenHierarchy
+			try {
+				MethodInfo[] methods = type.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
+				if (methods != null && methods.Length > 0)
+					return methods;
+			} catch {
+				// 如果还是失败，返回 null
+			}
+			
+			return null;
+		}
+
+		/// <summary>
+		/// 从方法数组中查找指定名称的方法（接受 string 或 object 参数）
+		/// </summary>
+		/// <param name="methods">方法数组</param>
+		/// <param name="methodName">方法名称</param>
+		/// <returns>找到的方法，如果未找到返回 null</returns>
+		private static MethodInfo FindMethod(MethodInfo[] methods, string methodName) {
+			if (methods == null || string.IsNullOrEmpty(methodName))
+				return null;
+			
+			Type stringType = typeof(string);
+			
+			foreach (MethodInfo method in methods) {
+				if (method == null || !method.IsStatic)
+					continue;
+				
+				// method.Name 通常不会抛出异常，不需要额外的 try-catch
+				if (method.Name != methodName)
+					continue;
+				
+				try {
+					ParameterInfo[] parameters = method.GetParameters();
+					if (parameters == null || parameters.Length != 1)
+						continue;
+					
+					ParameterInfo param = parameters[0];
+					if (param == null)
+						continue;
+					
+					Type paramType = param.ParameterType;
+					if (paramType == null)
+						continue;
+					
+					// 支持 string 或 object 类型的参数
+					if (paramType == stringType || paramType == typeof(object))
+						return method;
+				} catch {
+					// 忽略单个方法的错误，继续查找
+					continue;
+				}
+			}
+			
+			return null;
 		}
 
 		/// <summary>
