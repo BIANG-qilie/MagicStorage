@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using NPinyin;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using Terraria;
 using Terraria.Localization;
 
@@ -15,6 +16,36 @@ namespace MagicStorage.Common.Utils {
 		/// 使用 ConcurrentDictionary 确保线程安全
 		/// </summary>
 		private static readonly ConcurrentDictionary<int, PinyinInfo> _pinyinCache = new();
+
+		/// <summary>
+		/// NPinyin.Core 程序集缓存
+		/// </summary>
+		private static Assembly _nPinyinAssembly;
+
+		/// <summary>
+		/// NPinyin 是否已加载的标志（通过反射设置，避免循环依赖）
+		/// </summary>
+		private static bool? _nPinyinLoaded;
+
+		/// <summary>
+		/// NPinyin.Pinyin 类型缓存（通过反射获取，避免 JIT 阶段解析）
+		/// </summary>
+		private static Type _pinyinType;
+
+		/// <summary>
+		/// GetPinyin 方法缓存
+		/// </summary>
+		private static MethodInfo _getPinyinMethod;
+
+		/// <summary>
+		/// GetInitials 方法缓存
+		/// </summary>
+		private static MethodInfo _getInitialsMethod;
+
+		/// <summary>
+		/// 用于同步初始化 NPinyin 类型和方法的锁对象
+		/// </summary>
+		private static readonly object _pinyinInitLock = new object();
 
 		/// <summary>
 		/// 检查当前游戏语言是否为简体中文
@@ -33,12 +64,16 @@ namespace MagicStorage.Common.Utils {
 
 		/// <summary>
 		/// 检查是否应该启用拼音搜索
-		/// 仅在简体中文环境下启用
+		/// 仅在简体中文环境下启用，且 NPinyin 库已加载
 		/// </summary>
 		/// <returns>是否启用拼音搜索</returns>
 		public static bool ShouldEnablePinyinSearch() {
-			// 检查配置选项和语言设置
-			return MagicStorageConfig.EnablePinyinSearch && IsSimplifiedChinese();
+			// 检查配置选项、语言设置和 NPinyin 库是否已加载
+			if (!MagicStorageConfig.EnablePinyinSearch || !IsSimplifiedChinese())
+				return false;
+
+			// 确保 NPinyin 库已加载
+			return IsNPinyinLoaded();
 		}
 
 		/// <summary>
@@ -117,21 +152,235 @@ namespace MagicStorage.Common.Utils {
 
 		/// <summary>
 		/// 将中文文本转换为拼音信息
+		/// 使用反射调用 NPinyin 库，避免在 JIT 阶段解析类型
 		/// </summary>
 		/// <param name="text">中文文本</param>
 		/// <returns>拼音信息</returns>
+		[MethodImpl(MethodImplOptions.NoInlining)]
 		private static PinyinInfo ConvertToPinyin(string text) {
 			if (string.IsNullOrEmpty(text))
 				return new PinyinInfo();
 
+			// 如果 NPinyin 未加载，直接返回空信息
+			// 通过反射检查，避免循环依赖
+			if (!IsNPinyinLoaded())
+				return new PinyinInfo();
+
+			// 延迟初始化 NPinyin 类型和方法（使用反射避免 JIT 阶段解析）
+			// 使用双重检查锁定模式确保线程安全
+			if (_pinyinType == null || _getPinyinMethod == null || _getInitialsMethod == null) {
+				try {
+					lock (_pinyinInitLock) {
+						// 再次检查，避免重复初始化
+						if (_pinyinType == null || _getPinyinMethod == null || _getInitialsMethod == null) {
+							try {
+								// 使用反射查找已加载的程序集，避免直接引用
+								Assembly assembly = FindNPinyinAssembly();
+								if (assembly == null)
+									return new PinyinInfo();
+
+								// 从已加载的程序集中获取类型
+								// 添加额外的空值检查，防止 assembly 本身有问题
+								Type pinyinType = null;
+								try {
+									pinyinType = assembly.GetType("NPinyin.Pinyin", throwOnError: false);
+								} catch {
+									// 如果 GetType 抛出异常，pinyinType 保持为 null
+								}
+
+								if (pinyinType == null)
+									return new PinyinInfo();
+
+								// 获取方法（完全避免使用 GetMethod，只使用 GetMethods 然后手动过滤）
+								// 这样可以完全避免 AmbiguousMatchException
+								MethodInfo getPinyinMethod = null;
+								MethodInfo getInitialsMethod = null;
+								try {
+									Type stringType = typeof(string);
+									
+									// 使用 GetMethods 获取所有方法，然后手动过滤
+									// 完全避免使用 GetMethod，因为它可能抛出 AmbiguousMatchException
+									MethodInfo[] allMethods = null;
+									
+									// 尝试多种方式获取方法列表
+									bool methodsObtained = false;
+									
+									// 方式1：不使用 FlattenHierarchy
+									try {
+										allMethods = pinyinType.GetMethods(BindingFlags.Public | BindingFlags.Static);
+										if (allMethods != null && allMethods.Length > 0) {
+											methodsObtained = true;
+										}
+									} catch (AmbiguousMatchException) {
+										// 如果失败，尝试方式2
+									} catch {
+										// 其他异常也尝试方式2
+									}
+									
+									// 方式2：使用 FlattenHierarchy
+									if (!methodsObtained) {
+										try {
+											allMethods = pinyinType.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
+											if (allMethods != null && allMethods.Length > 0) {
+												methodsObtained = true;
+											}
+										} catch {
+											// 如果还是失败，返回空信息
+											return new PinyinInfo();
+										}
+									}
+									
+									if (!methodsObtained || allMethods == null || allMethods.Length == 0)
+										return new PinyinInfo();
+									
+									// 查找 GetPinyin(string) 方法
+									foreach (MethodInfo method in allMethods) {
+										if (method == null)
+											continue;
+										
+										try {
+											// 先检查名称和静态属性，避免不必要的 GetParameters 调用
+											// 添加空值检查，确保方法名称访问安全
+											string methodName = null;
+											try {
+												methodName = method.Name;
+											} catch {
+												continue;
+											}
+											
+											if (methodName != "GetPinyin" || !method.IsStatic)
+												continue;
+											
+											// 安全地获取参数信息
+											ParameterInfo[] parameters = null;
+											try {
+												parameters = method.GetParameters();
+											} catch {
+												// 如果 GetParameters 失败，跳过此方法
+												continue;
+											}
+											
+											if (parameters != null && parameters.Length == 1) {
+												Type paramType = null;
+												try {
+													ParameterInfo param = parameters[0];
+													if (param == null)
+														continue;
+													paramType = param.ParameterType;
+													if (paramType == null)
+														continue;
+												} catch {
+													continue;
+												}
+												
+												if (paramType == stringType || paramType == typeof(object)) {
+													getPinyinMethod = method;
+													break;
+												}
+											}
+										} catch {
+											// 忽略单个方法的错误，继续查找
+											continue;
+										}
+									}
+									
+									// 查找 GetInitials(string) 方法
+									foreach (MethodInfo method in allMethods) {
+										if (method == null)
+											continue;
+										
+										try {
+											// 先检查名称和静态属性，避免不必要的 GetParameters 调用
+											// 添加空值检查，确保方法名称访问安全
+											string methodName = null;
+											try {
+												methodName = method.Name;
+											} catch {
+												continue;
+											}
+											
+											if (methodName != "GetInitials" || !method.IsStatic)
+												continue;
+											
+											// 安全地获取参数信息
+											ParameterInfo[] parameters = null;
+											try {
+												parameters = method.GetParameters();
+											} catch {
+												// 如果 GetParameters 失败，跳过此方法
+												continue;
+											}
+											
+											if (parameters != null && parameters.Length == 1) {
+												Type paramType = null;
+												try {
+													ParameterInfo param = parameters[0];
+													if (param == null)
+														continue;
+													paramType = param.ParameterType;
+													if (paramType == null)
+														continue;
+												} catch {
+													continue;
+												}
+												
+												if (paramType == stringType || paramType == typeof(object)) {
+													getInitialsMethod = method;
+													break;
+												}
+											}
+										} catch {
+											// 忽略单个方法的错误，继续查找
+											continue;
+										}
+									}
+									
+									// 检查是否成功找到方法
+									if (getPinyinMethod == null || getInitialsMethod == null)
+										return new PinyinInfo();
+								} catch {
+									// 如果获取方法时抛出异常，方法保持为 null
+									return new PinyinInfo();
+								}
+
+								if (getPinyinMethod == null || getInitialsMethod == null)
+									return new PinyinInfo();
+
+								// 所有检查通过后，才赋值给静态字段（原子性操作）
+								_nPinyinAssembly = assembly;
+								_pinyinType = pinyinType;
+								_getPinyinMethod = getPinyinMethod;
+								_getInitialsMethod = getInitialsMethod;
+							} catch (Exception) {
+								// 如果初始化过程中出现任何异常，返回空信息
+								// 不记录异常，避免日志污染
+								return new PinyinInfo();
+							}
+						}
+					}
+				} catch (Exception) {
+					// 如果锁外出现异常，返回空信息
+					return new PinyinInfo();
+				}
+			}
+
+			// 再次检查方法是否已初始化（防止在锁外被设置为 null）
+			// 使用局部变量保存引用，避免在检查和使用之间被其他线程修改
+			MethodInfo getPinyin = _getPinyinMethod;
+			MethodInfo getInitials = _getInitialsMethod;
+			if (getPinyin == null || getInitials == null)
+				return new PinyinInfo();
+
 			try {
-				// 使用NPinyin库转换
-				string fullPinyin = Pinyin.GetPinyin(text);
+				// 使用反射调用 GetPinyin 方法（使用局部变量，确保线程安全）
+				object fullPinyinResult = getPinyin.Invoke(null, new object[] { text });
+				string fullPinyin = fullPinyinResult?.ToString() ?? string.Empty;
 				// 移除空格，转换为小写
 				fullPinyin = fullPinyin.Replace(" ", "").ToLowerInvariant();
 
-				// 获取拼音首字母
-				string firstLetters = Pinyin.GetInitials(text);
+				// 使用反射调用 GetInitials 方法（使用局部变量，确保线程安全）
+				object initialsResult = getInitials.Invoke(null, new object[] { text });
+				string firstLetters = initialsResult?.ToString() ?? string.Empty;
 				firstLetters = firstLetters.ToLowerInvariant();
 
 				return new PinyinInfo {
@@ -141,6 +390,66 @@ namespace MagicStorage.Common.Utils {
 			} catch {
 				// 如果转换失败，返回空信息（不影响原有搜索功能）
 				return new PinyinInfo();
+			}
+		}
+
+		/// <summary>
+		/// 检查 NPinyin 是否已加载（通过反射，避免循环依赖）
+		/// </summary>
+		[MethodImpl(MethodImplOptions.NoInlining)]
+		private static bool IsNPinyinLoaded() {
+			if (_nPinyinLoaded.HasValue)
+				return _nPinyinLoaded.Value;
+
+			try {
+				// 通过反射检查 CheckModBuildVersionBeforeJIT.nPinyinLoaded
+				// 使用当前程序集名称，避免硬编码
+				Assembly currentAssembly = Assembly.GetExecutingAssembly();
+				string assemblyName = currentAssembly.GetName().Name;
+				Type checkType = Type.GetType($"MagicStorage.CheckModBuildVersionBeforeJIT, {assemblyName}");
+				if (checkType != null) {
+					FieldInfo field = checkType.GetField("nPinyinLoaded", BindingFlags.Public | BindingFlags.Static);
+					if (field != null) {
+						object value = field.GetValue(null);
+						if (value is bool loaded) {
+							_nPinyinLoaded = loaded;
+							return loaded;
+						}
+					}
+				}
+			} catch {
+				// 如果反射失败，假设未加载（安全策略）
+			}
+
+			// 默认返回 false，确保不会因为反射失败而启用拼音搜索
+			_nPinyinLoaded = false;
+			return false;
+		}
+
+		/// <summary>
+		/// 获取已加载的 NPinyin.Core 程序集
+		/// 从 MagicStorageMod 获取，避免在 JIT 阶段触发程序集解析
+		/// </summary>
+		[MethodImpl(MethodImplOptions.NoInlining)]
+		private static Assembly FindNPinyinAssembly() {
+			try {
+				// 通过反射从 MagicStorageMod 获取程序集引用
+				Type modType = Type.GetType("MagicStorage.MagicStorageMod, MagicStorage");
+				if (modType == null)
+					return null;
+
+				PropertyInfo prop = modType.GetProperty("NPinyinAssembly", BindingFlags.Public | BindingFlags.Static);
+				if (prop == null)
+					return null;
+
+				object assemblyObj = prop.GetValue(null);
+				if (assemblyObj == null)
+					return null;
+
+				return assemblyObj as Assembly;
+			} catch (Exception) {
+				// 如果反射失败，返回 null
+				return null;
 			}
 		}
 
