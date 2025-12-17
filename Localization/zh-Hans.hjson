@@ -453,36 +453,14 @@ Mods: {
 					'''
 			}
 
-			ErrorItems: {
-				CommonTooltip:
-					'''
-					<FULLNAME>
-					<PREFIX>
-					'''
-				NameText: 名称: {0}/{1}
-				NameTextUnknown: <unknown>
-				PrefixText: 词缀: {0}
-				PrefixTextModded: 词缀: {0}/{1}
-			}
-
 			Error_ItemSlotRenderFail: {
 				DisplayName: 错误//物品渲染
-				Message: "{$Mods.MagicStorage.HoverText.Errors.RenderFail}"
+				// Tooltip: ""
 			}
 
 			Error_ItemNetReadFail: {
 				DisplayName: 错误//物品客户端读取
-				Message: "{$Mods.MagicStorage.HoverText.Errors.NetFail}"
-			}
-
-			TagIOStressTest: {
-				DisplayName: 调试//数据压缩测试
-				Tooltip: ""
-			}
-
-			Error_ItemNBTFail: {
-				DisplayName: 错误//NBT读取
-				Message: "{$Mods.MagicStorage.HoverText.Errors.NBTFail}"
+				// Tooltip: ""
 			}
 		}
 
@@ -1057,7 +1035,6 @@ Mods: {
 			Errors: {
 				RenderFail: 由于错误，此物品无法渲染
 				NetFail: 此物品在当前客户端上加载失败
-				NBTFail: 此物品的NBT数据反序列化失败
 			}
 
 			TestItems: {
@@ -1379,21 +1356,40 @@ Mods: {
 					Label: 全局物品微光黑名单
 					Tooltip: 按住左 Ctrl + 左 Shift 点击以添加/移除黑名单
 				}
-
-				useOldSlotFocus: {
-					Label: 使用旧版槽位焦点
-					Tooltip: ""
-				}
 			}
 
 			ButtonConfigurationMode: {
 				// Tooltip: ""
-				// Legacy.Label: Legacy
-				// ModernPaged.Label: Paged
-				// ModernConfigurable.Label: Configurable
-				// LegacyWithGear.Label: Legacy + Configurable
-				// LegacyBasicWithPaged.Label: Legacy + Paged
-				// ModernDropdown.Label: Dropdown
+
+				Legacy: {
+					// Label: Legacy
+					// Tooltip: ""
+				}
+
+				ModernPaged: {
+					// Label: Paged
+					// Tooltip: ""
+				}
+
+				ModernConfigurable: {
+					// Label: Configurable
+					// Tooltip: ""
+				}
+
+				LegacyWithGear: {
+					// Label: Legacy + Configurable
+					// Tooltip: ""
+				}
+
+				LegacyBasicWithPaged: {
+					// Label: Legacy + Paged
+					// Tooltip: ""
+				}
+
+				ModernDropdown: {
+					// Label: Dropdown
+					// Tooltip: ""
+				}
 			}
 
 			MagicStorageServerConfig: {

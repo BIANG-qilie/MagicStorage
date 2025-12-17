@@ -15,7 +15,7 @@ namespace MagicStorage {
 				versionChecked = true;
 			}
 
-			// 延迟 JIT ConvertToPinyin 方法，直到 NPinyin.Core.dll 加载完成
+			// Delay JIT compilation of ConvertToPinyin method until NPinyin.Core.dll is loaded
 			if (member is MethodInfo method && 
 			    method.DeclaringType?.FullName == "MagicStorage.Common.Utils.PinyinHelper" &&
 			    method.Name == "ConvertToPinyin") {

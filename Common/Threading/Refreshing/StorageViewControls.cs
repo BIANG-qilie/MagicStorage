@@ -1,6 +1,7 @@
 ﻿using MagicStorage.Common.Systems;
 using MagicStorage.Common.Utils;
 using MagicStorage.CrossMod;
+using MagicStorage.Sorting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -328,12 +329,12 @@ namespace MagicStorage.Common.Threading.Refreshing {
 			}
 
 			if (!string.IsNullOrEmpty(itemNameSearchText)) {
-				// 支持拼音搜索（仅在简体中文环境下启用）
+				// Support pinyin search (only enabled in Simplified Chinese environment)
 				if (PinyinHelper.ShouldEnablePinyinSearch()) {
 					if (!PinyinHelper.MatchesSearch(item, itemNameSearchText))
 						return false;
 				} else {
-					// 原有逻辑：直接字符串匹配
+					// Original logic: direct string matching
 					if (!item.Name.Contains(itemNameSearchText, StringComparison.OrdinalIgnoreCase))
 						return false;
 				}
@@ -343,7 +344,7 @@ namespace MagicStorage.Common.Threading.Refreshing {
 				try {
 					// Local capturing
 					string s = itemTooltipSearchText;
-					if (!Utility.GetItemTooltipLines(item).Any(line => line.Contains(s, StringComparison.OrdinalIgnoreCase)))
+					if (!ItemSorter.GetItemTooltipLines(item).Any(line => line.Contains(s, StringComparison.OrdinalIgnoreCase)))
 						return false;
 				} catch {
 					return false;

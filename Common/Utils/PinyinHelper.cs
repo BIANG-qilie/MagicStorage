@@ -5,6 +5,8 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using Terraria;
 using Terraria.Localization;
+using Terraria.ModLoader;
+using Terraria.ModLoader.Config;
 
 namespace MagicStorage.Common.Utils {
 	/// <summary>
@@ -69,11 +71,15 @@ namespace MagicStorage.Common.Utils {
 		/// <returns>Whether pinyin search is enabled</returns>
 		public static bool ShouldEnablePinyinSearch() {
 			// Check configuration option, language setting, and whether NPinyin library is loaded
-			if (!MagicStorageConfig.EnablePinyinSearch || !IsSimplifiedChinese())
+			bool configEnabled = MagicStorageConfig.EnablePinyinSearch;
+			bool isChinese = IsSimplifiedChinese();
+			bool nPinyinLoaded = IsNPinyinLoaded();
+			
+			if (!configEnabled || !isChinese)
 				return false;
 
 			// Ensure NPinyin library is loaded
-			return IsNPinyinLoaded();
+			return nPinyinLoaded;
 		}
 
 		/// <summary>
@@ -132,21 +138,24 @@ namespace MagicStorage.Common.Utils {
 			// This is the fastest matching method, check first
 			// If Chinese matching succeeds, return directly to avoid unnecessary pinyin conversion
 			if (!string.IsNullOrEmpty(itemName) && 
-				itemName.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+				itemName.Contains(searchText, StringComparison.OrdinalIgnoreCase)) {
 				return true;
+			}
 
 			// 2. Pinyin matching (only executed when Chinese matching fails, to avoid unnecessary pinyin conversion)
 			var pinyinInfo = GetPinyinInfo(item);
 
 			// 2.1 Full pinyin matching (case-insensitive)
 			if (!string.IsNullOrEmpty(pinyinInfo.FullPinyin) &&
-				pinyinInfo.FullPinyin.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+				pinyinInfo.FullPinyin.Contains(searchText, StringComparison.OrdinalIgnoreCase)) {
 				return true;
+			}
 
 			// 2.2 Pinyin initials matching (case-insensitive)
 			if (!string.IsNullOrEmpty(pinyinInfo.FirstLetters) &&
-				pinyinInfo.FirstLetters.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+				pinyinInfo.FirstLetters.Contains(searchText, StringComparison.OrdinalIgnoreCase)) {
 				return true;
+			}
 
 			return false;
 		}

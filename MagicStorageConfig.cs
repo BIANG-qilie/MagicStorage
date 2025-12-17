@@ -83,7 +83,7 @@ namespace MagicStorage {
 		public bool automatonRemembers;
 
 		[DefaultValue(true)]
-		public bool enablePinyinSearch;  // 新增：启用拼音搜索（仅在简体中文环境下生效）
+		public bool enablePinyinSearch;  // Enable pinyin search (only effective in Simplified Chinese environment)
 
 		public static MagicStorageConfig Instance => ModContent.GetInstance<MagicStorageConfig>();
 

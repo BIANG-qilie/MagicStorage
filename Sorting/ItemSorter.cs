@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using MagicStorage.Common.Systems;
+using MagicStorage.Common.Utils;
 using Terraria;
 using Terraria.GameContent.UI;
 using Terraria.ModLoader;
@@ -325,10 +326,16 @@ namespace MagicStorage.Sorting
 					return true;  //Empty mod name = anything is valid
 			}
 
-			return item.Name.Contains(filter, StringComparison.OrdinalIgnoreCase);
+			// Support pinyin search (only enabled in Simplified Chinese environment)
+			if (PinyinHelper.ShouldEnablePinyinSearch()) {
+				return PinyinHelper.MatchesSearch(item, filter);
+			} else {
+				// Original logic: direct string matching
+				return item.Name.Contains(filter, StringComparison.OrdinalIgnoreCase);
+			}
 		}
 
-		private static IEnumerable<string> GetItemTooltipLines(Item item) {
+		internal static IEnumerable<string> GetItemTooltipLines(Item item) {
 			Item hoverItem = item;
 			int yoyoLogo = -1;
 			int researchLine = -1;

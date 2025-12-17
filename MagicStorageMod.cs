@@ -146,7 +146,7 @@ namespace MagicStorage {
 			if (args[0] is not string function)
 				throw new ArgumentException("Expected function name");
 
-			return BaseCallFunction.Find(this, function).Call(args.AsSpan(1));
+			return CrossMod.Calls.BaseCallFunction.Find(this, function).Call(args.AsSpan(1));
 		}
 	}
 }

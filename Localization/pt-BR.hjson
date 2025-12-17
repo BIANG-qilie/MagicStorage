@@ -1355,12 +1355,36 @@ Mods: {
 
 			ButtonConfigurationMode: {
 				Tooltip: ""
-				Legacy.Label: Legado
-				ModernPaged.Label: Paginada
-				ModernConfigurable.Label: Configurável
-				LegacyWithGear.Label: Legado + Configurável
-				LegacyBasicWithPaged.Label: Legado + Paginada
-				ModernDropdown.Label: Lista Suspensa
+
+				Legacy: {
+					Label: Legado
+					// Tooltip: ""
+				}
+
+				ModernPaged: {
+					Label: Paginada
+					// Tooltip: ""
+				}
+
+				ModernConfigurable: {
+					Label: Configurável
+					// Tooltip: ""
+				}
+
+				LegacyWithGear: {
+					Label: Legado + Configurável
+					// Tooltip: ""
+				}
+
+				LegacyBasicWithPaged: {
+					Label: Legado + Paginada
+					// Tooltip: ""
+				}
+
+				ModernDropdown: {
+					Label: Lista Suspensa
+					// Tooltip: ""
+				}
 			}
 
 			MagicStorageServerConfig: {

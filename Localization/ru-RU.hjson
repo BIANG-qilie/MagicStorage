@@ -1353,12 +1353,36 @@ Mods: {
 
 			ButtonConfigurationMode: {
 				Tooltip: ""
-				Legacy.Label: Старый
-				ModernPaged.Label: Страничный
-				ModernConfigurable.Label: Настраиваемый
-				LegacyWithGear.Label: Старый + Настраиваемый
-				LegacyBasicWithPaged.Label: Старый + Страничный
-				ModernDropdown.Label: Выпадающее меню
+
+				Legacy: {
+					Label: Старый
+					// Tooltip: ""
+				}
+
+				ModernPaged: {
+					Label: Страничный
+					// Tooltip: ""
+				}
+
+				ModernConfigurable: {
+					Label: Настраиваемый
+					// Tooltip: ""
+				}
+
+				LegacyWithGear: {
+					Label: Старый + Настраиваемый
+					// Tooltip: ""
+				}
+
+				LegacyBasicWithPaged: {
+					Label: Старый + Страничный
+					// Tooltip: ""
+				}
+
+				ModernDropdown: {
+					Label: Выпадающее меню
+					// Tooltip: ""
+				}
 			}
 
 			MagicStorageServerConfig: {
