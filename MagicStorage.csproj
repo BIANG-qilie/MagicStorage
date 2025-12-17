@@ -46,5 +46,8 @@
     <Reference Include="SerousCommonLib">
       <HintPath>$(SerousCommonLibPath)</HintPath>
     </Reference>
+    <Reference Include="NPinyin.Core">
+      <HintPath>..\references\NPinyin.Core.dll</HintPath>
+    </Reference>
   </ItemGroup>
 </Project>
