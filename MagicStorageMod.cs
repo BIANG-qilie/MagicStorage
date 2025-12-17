@@ -82,7 +82,6 @@ namespace MagicStorage {
 					CheckModBuildVersionBeforeJIT.nPinyinLoaded = true;
 					
 					Logger.Info("Successfully loaded NPinyin.Core.dll from embedded resources.");
-					Logger.Info("[DEBUG] Pinyin search feature is now enabled.");
 				}
 			} catch (Exception ex) {
 				// If loading fails, log error but don't affect other mod functionality
