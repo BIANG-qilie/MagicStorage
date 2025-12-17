@@ -65,12 +65,13 @@ namespace MagicStorage.Common.Utils {
 			if (item?.IsAir != false)
 				return new PinyinInfo();
 
+			// 在 lambda 外部获取物品名称，避免闭包捕获 item 对象
+			// 对于同一个 item.type，item.Name 应该是稳定的
+			string itemName = item.Name ?? string.Empty;
+			int itemType = item.type;
+
 			// 使用 GetOrAdd 确保线程安全，避免重复计算
-			return _pinyinCache.GetOrAdd(item.type, type => {
-				// 获取物品名称，如果为null则使用空字符串
-				string itemName = item.Name ?? string.Empty;
-				return ConvertToPinyin(itemName);
-			});
+			return _pinyinCache.GetOrAdd(itemType, _ => ConvertToPinyin(itemName));
 		}
 
 		/// <summary>
