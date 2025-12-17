@@ -1324,7 +1324,7 @@ Mods: {
 				uiFavorites: {
 					Label: "[i:FallenStar]  收藏物品与配方"
 					Tooltip: 开启后，可在制作单元中收藏物品和配方
-git				}
+				}
 
 				extraFilterIcons: {
 					Label: "[i:Cog]  更多排序选项"
