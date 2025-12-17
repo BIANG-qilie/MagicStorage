@@ -35,10 +35,16 @@
   <ItemGroup>
     <EmbeddedResource Include="Common\Systems\scramble" />
     <EmbeddedResource Include="Common\Systems\unscramble" />
+    <EmbeddedResource Include="..\references\NPinyin.Core.dll">
+      <LogicalName>NPinyin.Core.dll</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <Reference Include="SerousCommonLib">
       <HintPath>..\references\1.4.4\SerousCommonLib.dll</HintPath>
+    </Reference>
+    <Reference Include="NPinyin.Core">
+      <HintPath>..\references\NPinyin.Core.dll</HintPath>
     </Reference>
   </ItemGroup>
 </Project>
